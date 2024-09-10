@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <title>Document</title>
+  </head>
+
+  <body>
+    {{ question.question }}
+
+    <div role="presentation" tabindex="-1">hello</div>
+
+    <textarea name="" id="code" rows="30" cols="100"></textarea>
+
+    <br /><br />
+
+    <button type="button" id="run" onclick="run()">Run</button>
+
+    <button type="button" id="submit" onclick="submit()">Submit</button>
+
+    <div id="output">
+
+    </div>
+
+    <script>
+      let indent = 0;
+
+      document.getElementById("code").addEventListener("keyup", (event) => {
+        let code = document.getElementById("code").value;
+        code = code.replaceAll(" ", "");
+        code = code.replaceAll("\n", "");
+        if (event.key === "Enter") {
+          if (code.charAt(code.length - 1) === ":") {
+            indent += 4;
+            document.getElementById("code").value += " ".repeat(indent);
+          }
+        }
+
+        if (event.key === "Backspace" || event.key === "Delete") {
+          indent = 0;
+        }
+
+        if (event.ctrlKey && event.key === "b") {
+            document.getElementById("code").value += " ".repeat(4);
+        }
+
+      });
+
+      const run = async () => {
+        let code = document.getElementById("code").value;
+        let question = "{{ question.id }}";
+
+        $.ajax({
+          url: "{% url 'test-code' %}",
+          method: "POST",
+          data: {
+            id: question,
+            code: code
+          },
+          success: (data) => {
+            document.getElementById("output").innerHTML = data.exec;
+            document.getElementById("output").innerHTML += "<br>" + data.output;
+            document.getElementById("output").innerHTML += `<br>Time: ${data.time}ms`;
+          },
+        });
+      };
+
+      const submit = async () => {
+        let code = document.getElementById("code").value;
+        let question = "{{ question.id }}";
+        $.ajax({
+          url: "{% url 'submit-code' %}",
+          method: "POST",
+          data: {
+            id: question,
+            code: code
+          },
+          success: (data) => {
+            document.getElementById("output").innerHTML = data.exec;
+            document.getElementById("output").innerHTML += "<br>" + data.output;
+            document.getElementById("output").innerHTML += `<br>Time: ${data.time}ms`;
+          },
+        });
+      }
+    </script>
+  </body>
+</html>

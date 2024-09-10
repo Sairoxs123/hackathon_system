@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    {% if error == "no-exist" %}
+        <h1>Account does not exist.</h1>
+    {% elif error == "password" %}
+        <h1>Incorrect password.</h1>
+    {% endif %}
+
+    <form action="{% url 'login' %}" method="post">
+        {% csrf_token %}
+
+        <label>Email: </label>
+        <input type="text" name="email" placeholder="Email: ">
+
+        <br><br>
+
+        <label>Password: </label>
+        <input type="password" name="password" placeholder="Password: ">
+
+        <br><br>
+
+        <input type="submit" value="Submit">
+
+    </form>
+</body>
+</html>

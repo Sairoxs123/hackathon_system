@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <table border="2" width="100%">
+        <tr>
+            <th>Status</th>
+            <th>Title</th>
+            <th>Difficulty</th>
+        </tr>
+
+        {% for i in questions %}
+            <tr align="center">
+                <td>Done</td>
+                <td>
+                    <a href="{% url 'question' i.id %}">
+                        {{ i.title }}
+                    </a>
+                </td>
+                <td>{{ i.difficulty }}</td>
+            </tr>
+        {% endfor %}
+
+    </table>
+
+</body>
+</html>
