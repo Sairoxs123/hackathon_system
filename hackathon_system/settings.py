@@ -29,7 +29,7 @@ SECRET_KEY = "django-insecure-0_n!k)w^)wd1xd17l4fi$kl_%+arpben7an^bbhm=jaw5p1ojm
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["http://127.0.0.1:8000", "saiteja123.pythonanywhere.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "saiteja123.pythonanywhere.com"]
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -123,7 +123,7 @@ USE_TZ = True
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_HOST_USER = "jsspsvoting@gmail.com"
-EMAIL_HOST_PASSWORD = "kivilaopxbwdkish"
+EMAIL_HOST_PASSWORD = "etjbookbhedmafwk"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
