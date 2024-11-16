@@ -14,7 +14,7 @@ class UsersAdmin(admin.ModelAdmin):
 @admin.register(Submissions)
 
 class SubmissionsAdmin(admin.ModelAdmin):
-    list_display = ["id", "user", "submit_time", "exec_time", "correct"]
+    list_display = ["id", "user", "submit_time", "exec_time", "memory", "correct"]
     ordering = ["submit_time"]
     search_fields = ["user"]
     list_filter = ["user"]
@@ -55,3 +55,35 @@ class CompCodeStorageAdmin(admin.ModelAdmin):
     list_display = ["id", "question", "user"]
     ordering = ["id"]
     search_fields = ["question", "user"]
+
+@admin.register(Quiz)
+
+class QuizzesAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "single_submit"]
+    ordering = ["id"]
+    search_fields = ["title"]
+
+@admin.register(QuizSubmissions)
+
+class QuizSubmissionsAdmin(admin.ModelAdmin):
+    list_display = ["id", "student", "question", "correct", "submit_time"]
+    ordering = ["id"]
+    search_fields = ["student", "question"]
+    list_filter = ["question", "student"]
+
+@admin.register(Question)
+
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ["id", "quiz", "text"]
+    ordering = ["id"]
+    search_fields = ["quiz", "text"]
+    list_filter = ["quiz"]
+
+@admin.register(Option)
+
+class OptionAdmin(admin.ModelAdmin):
+    list_display = ["id", "question", "text", "is_correct"]
+    ordering = ["id"]
+    search_fields = ["question", "text"]
+    list_filter = ["question"]
+

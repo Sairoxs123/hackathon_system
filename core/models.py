@@ -78,3 +78,44 @@ class CompCodeStorage(models.Model):
 
     def __str__(self):
         return str(self.user)
+
+class Quiz(models.Model):
+    id = models.IntegerField(primary_key=True, blank=False, unique=True)
+    title = models.CharField("Quiz Title", max_length=100, null=False)
+    single_submit = models.BooleanField("Single Submit", default=False)
+    start_time = models.DateTimeField("Start Time", null=True, blank=True)
+    end_time = models.DateTimeField("End Time", null=True, blank=True)
+    grade = models.IntegerField("Grade")
+    section = models.CharField("Section", max_length=1)
+    difficulty = models.CharField("Difficulty", max_length=10, default="Easy")
+
+    def __str__(self):
+        return self.title
+
+class Question(models.Model):
+    id = models.IntegerField(primary_key=True, blank=False, unique=True)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    text = models.CharField("Question Text", max_length=1024, null=False)
+    image = models.ImageField(upload_to='quiz_images', blank=True, null=True)
+
+    def __str__(self):
+        return self.text
+
+class Option(models.Model):
+    id = models.IntegerField(primary_key=True, blank=False, unique=True)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    text = models.CharField("Option Text", max_length=255, null=False)
+    is_correct = models.BooleanField("Is Correct", default=False)
+    image = models.ImageField(upload_to='option_images', blank=True, null=True)
+
+    def __str__(self):
+        return self.text
+
+class QuizSubmissions(models.Model):
+    id = models.IntegerField(primary_key=True, blank=False, unique=True)
+    student = models.ForeignKey(Users, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    correct = models.BooleanField("Correct", default=False)
+    selected_option = models.ForeignKey(Option, on_delete=models.CASCADE, null=True, blank=True)
+    submit_time = models.DateTimeField("Submit Time")
