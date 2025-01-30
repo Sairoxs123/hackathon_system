@@ -22,7 +22,7 @@ class SubmissionsAdmin(admin.ModelAdmin):
 @admin.register(Questions)
 
 class QuestionsAdmin(admin.ModelAdmin):
-    list_display = ["id", "title", "question", "inputs", "outputs", "difficulty"]
+    list_display = ["id", "title", "question", "inputs", "outputs", "difficulty", "points"]
     ordering = ["id"]
     search_fields = ["id", "title", "question"]
     list_filter = ["difficulty"]
@@ -87,3 +87,10 @@ class OptionAdmin(admin.ModelAdmin):
     search_fields = ["question", "text"]
     list_filter = ["question"]
 
+@admin.register(Updates)
+
+class UpdatesAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "description", "date"]
+    ordering = ["id"]
+    search_fields = ["title", "description"]
+    list_filter = ["date"]

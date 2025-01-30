@@ -99,14 +99,8 @@ def verifySignup(request):
 @csrf_exempt
 def login(request):
     if request.method == "POST":
-        data = request.body.decode()
-        jsdata = json.loads(data)
-        email = jsdata["email"]
-        token = jsdata["token"]
-        password = jsdata["password"]
-
-        if token not in tokens:
-            return JsonResponse({"message":"Invalid request. Please try again later."})
+        email = request.POST["email"]
+        password = request.POST["password"]
 
         try:
             x = Users.objects.get(email=email)

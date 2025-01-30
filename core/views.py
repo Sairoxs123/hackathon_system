@@ -2,84 +2,19 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from .models import *
 from django.views.decorators.csrf import csrf_exempt
-import sys
-import io
 from datetime import datetime, timedelta
 from random import choice
 from django.shortcuts import get_object_or_404
 import pytz
+from django.core.mail import EmailMessage
+from .password import bcrypt_hash
 
-
-def specialNameGenerator():
-    chars = [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "A",
-        "B",
-        "C",
-        "D",
-        "E",
-        "F",
-        "G",
-        "H",
-        "I",
-        "J",
-        "K",
-        "L",
-        "M",
-        "N",
-        "O",
-        "P",
-        "Q",
-        "R",
-        "S",
-        "T",
-        "U",
-        "V",
-        "W",
-        "X",
-        "Y",
-        "Z",
-        "a",
-        "b",
-        "c",
-        "d",
-        "e",
-        "f",
-        "g",
-        "h",
-        "i",
-        "j",
-        "k",
-        "l",
-        "m",
-        "n",
-        "o",
-        "p",
-        "q",
-        "r",
-        "s",
-        "t",
-        "u",
-        "v",
-        "w",
-        "x",
-        "y",
-        "z",
-        "_",
-    ]
+def specialNameGenerator(n=5):
+    chars = [ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "_", ]
 
     special = ""
 
-    for i in range(5):
+    for i in range(n):
         special += choice(chars)
 
     try:
@@ -89,29 +24,51 @@ def specialNameGenerator():
     except:
         return special
 
+def caesar_cipher_decrypt(ciphertext, key):
+    alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    result = ''
+    shift = len(key)
+    for char in ciphertext:
+        if char.upper() in alphabet:
+            current_index = alphabet.index(char.upper())
+            new_index = (current_index - shift) % 26
+            result += alphabet[new_index] if char.isupper() else alphabet[new_index].lower()
+        else:
+            result += char  # Non-letter characters are unchanged
 
-def execute_user_code(code):
-    # Capture stdout and stderr to get the output
-    old_stdout = sys.stdout
-    sys.stdout = buffer = io.StringIO()
+    return result
 
-    start = datetime.now()
+def vigenere_cipher_decrypt(ciphertext, keyword):
+    alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    result = ''
+    keyword = keyword.upper()
+    keyword_index = 0
 
-    try:
-        # Execute the code using exec()
-        exec(code)
-    except Exception as e:
-        return f"Error: {e}"
-    finally:
-        # Restore stdout
-        sys.stdout = old_stdout
+    for char in ciphertext:
+        if char.upper() in alphabet:
+            text_index = alphabet.index(char.upper())
+            keyword_char = keyword[keyword_index % len(keyword)]
+            keyword_index_in_alphabet = alphabet.index(keyword_char)
+            new_index = (text_index - keyword_index_in_alphabet) % 26
+            result += alphabet[new_index] if char.isupper() else alphabet[new_index].lower()
+            keyword_index += 1
+        else:
+            result += char  # Non-letter characters are unchanged
 
-    end = datetime.now()
+    return result
 
-    delta = end - start
+def xor_encrypt_decrypt(input_text, key):
+    output = ''
+    for i in range(len(input_text)):
+        output += chr(ord(input_text[i]) ^ ord(key[i % len(key)]))
+    return output
 
-    return buffer.getvalue(), delta.microseconds
+decryptions = [caesar_cipher_decrypt, xor_encrypt_decrypt, vigenere_cipher_decrypt]
 
+keywords = ["technology", "innovation", "artificial intelligence", "machine learning", "data science", "software development", "web development", "mobile development", "cloud computing", "cybersecurity", "blockchain", "internet of things", "augmented reality", "virtual reality", "sustainable technology", "green technology", "clean energy", "renewable energy", "climate change", "sustainability", "social impact", "digital transformation", "automation", "robotics", "biotechnology", "nanotechnology", "quantum computing", "future of work", "remote work", "workplace culture", "diversity and inclusion", "mental health", "wellbeing", "work-life balance", "leadership", "management", "teamwork", "communication", "creativity", "innovation", "problem-solving", "critical thinking", "digital literacy", "data privacy", "ethical technology", "responsible AI", "human-centered design", "user experience", "user interface", "design thinking", "product management", "project management", "agile methodology", "devops", "software engineering", "full stack development", "front-end development", "back-end development", "database management", "network engineering", "cybersecurity", "cloud security", "data security", "ethical hacking", "penetration testing", "incident response", "digital forensics", "blockchain security", "IoT security", "AI ethics", "algorithmic bias", "fairness", "transparency", "accountability", "sustainability", "circular economy", "renewable energy", "climate action", "eco-friendly", "green technology", "sustainable development", "social impact", "community engagement", "philanthropy", "nonprofit", "social enterprise", "impact investing", "global citizenship", "cultural diversity", "language learning", "international relations", "global health", "human rights", "social justice", "equity", "inclusion", "diversity", "education", "lifelong learning", "online learning", "e-learning", "STEM education", "digital literacy", "financial literacy", "entrepreneurship", "small business", "startup", "innovation", "business strategy", "marketing", "sales", "customer experience", "digital marketing", "social media marketing", "content marketing", "SEO", "SEM", "email marketing", "data analytics", "business intelligence", "data visualization", "machine learning", "artificial intelligence", "natural language processing", "computer vision", "big data", "data science", "data engineering", "data mining", "data warehousing", "cloud computing", "cloud infrastructure", "cloud security", "cloud architecture", "software development", "software engineering", "agile development", "devops", "full stack development", "front-end development", "back-end development", "web development", "mobile development", "game development", "cybersecurity", "network security", "information security", "ethical hacking", "penetration testing", "incident response", "digital forensics", "blockchain", "cryptocurrency", "smart contracts", "decentralized finance", "NFT", "internet of things", "IoT devices", "IoT security", "IoT applications", "artificial intelligence", "machine learning", "natural language processing", "computer vision", "robotics", "automation", "virtual reality", "augmented reality", "mixed reality", "metaverse", "quantum computing", "biotechnology", "nanotechnology", "genetics", "neuroscience", "bioinformatics", "space exploration", "astronomy", "astrophysics", "climate change", "sustainability", "renewable energy", "green technology", "climate action", "environmental science", "ecology", "conservation", "wildlife conservation", "ocean conservation", "sustainable agriculture", "sustainable fashion", "zero waste", "circular economy", "social impact", "social justice", "human rights", "global health", "education", "lifelong learning", "online learning", "e-learning", "STEM education", "digital literacy", "financial literacy", "entrepreneurship", "small business", "startup", "innovation", "business strategy", "marketing", "sales", "customer experience", "digital marketing", "social media marketing", "content marketing", "SEO", "SEM", "email marketing", "data analytics", "business intelligence", "data visualization", "leadership", "management", "teamwork", "communication", "creativity", "innovation", "problem-solving", "critical thinking", "emotional intelligence", "mental health", "wellbeing", "work-life balance", "diversity and inclusion", "equity", "belonging", "cultural competence", "global citizenship", "language learning", "international relations", "diplomacy", "humanitarian aid", "peacebuilding", "conflict resolution", "social work", "psychology", "sociology", "anthropology", "history", "philosophy", "literature", "art", "music", "film", "theater", "dance", "design", "architecture", "urban planning", "landscape architecture", "interior design", "graphic design", "web design", "UX design", "UI design", "game design", "fashion design", "product design", "industrial design", "photography", "videography", "journalism", "writing", "editing", "publishing", "public relations", "advertising", "marketing communications", "brand management", "digital media", "social media", "content creation", "influencer marketing", "e-commerce", "retail", "supply chain management", "logistics", "operations management", "finance", "accounting", "economics", "investment", "banking", "insurance", "real estate", "law", "business law", "corporate law", "intellectual property law", "tax law", "criminal law", "constitutional law", "international law", "human rights law", "environmental law", "health law", "education law", "labor law", "family law", "criminal justice", "corrections", "probation and parole", "police science", "forensic science", "cybersecurity", "national security", "intelligence analysis", "counterterrorism", "military science", "geopolitics", "international relations", "diplomacy", "foreign policy", "political science", "public policy", "public administration", "government", "politics", "elections", "public opinion", "civic engagement", "social movements", "activism", "nonprofit", "philanthropy", "volunteerism", "community development", "social work", "mental health", "public health", "healthcare", "medicine", "nursing"]
+
+def verify_post_request(algorithm, encrypted):
+    return decryptions[algorithm - 1](encrypted, "sai teja sagiraju") in keywords
 
 def saveCompCode(question, email, code):
     user = Users.objects.get(email=email)
@@ -128,40 +85,32 @@ def saveCompCode(question, email, code):
 
 # Create your views here.
 
-
+@csrf_exempt
 def index(request):
-    if request.session.get("logged-in"):
-        questions = Questions.objects.all()
-
-        return render(request, "core/index.html", {"questions": questions})
-
-    return redirect("/admin")
+    return JsonResponse({"message":True})
 
 def get_questions(request):
     questions = Questions.objects.all()
-    name = request.GET.get("name")
-    user = Users.objects.get(name=name)
+    email = request.GET.get("email")
+    user = Users.objects.get(email=email)
     json = []
     for i in questions:
         try:
-            x = Submissions.objects.get(user=user, question=i)
-            json.append(
-                {
-                    "id": i.id,
-                    "title": i.title,
-                    "difficulty": i.difficulty,
-                    "completed": True,
-                }
-            )
+            y = CodeStorage.objects.get(user=user, question=i)
+            attempt = True
         except:
-            json.append(
-                {
-                    "id": i.id,
-                    "title": i.title,
-                    "difficulty": i.difficulty,
-                    "completed": False,
-                }
-            )
+            attempt = False
+        x = Submissions.objects.filter(user=user, question=i)
+        json.append(
+            {
+                "id": i.id,
+                "title": i.title,
+                "difficulty": i.difficulty,
+                "completed": True if len(x) > 0 else False,
+                "in_progress": attempt if len(x) == 0 else False,
+                "difficultyColor": f'text-{"green" if i.difficulty == "E" else "yellow" if i.difficulty == "M" else "red"}-500',
+            }
+        )
     return JsonResponse({"questions": json})
 
 
@@ -184,7 +133,7 @@ def get_question_details(request, id):
     )
 
 
-def getQuestion(request, id):
+#def getQuestion(request, id):
     question = Questions.objects.get(id=id)
 
     return render(request, "core/question.html", {"question": question})
@@ -235,6 +184,21 @@ def submitCode(request):
         user = Users.objects.get(email=email)
         submit_time = datetime.now()
         correct = bool(request.POST.get("correct"))
+        incorrect = 0
+        prev_submissions = Submissions.objects.all().filter(user=user, question=question)
+        for i in prev_submissions:
+            if not i.correct:
+                incorrect += 1
+
+        if correct:
+            points = 100 - (incorrect * 10)
+            if points < 0:
+                points = 0
+            else:
+                points = points * question.points / 100
+            print(points)
+            user.question_points = points
+            user.save()
 
         Submissions(
             user=user,
@@ -246,10 +210,10 @@ def submitCode(request):
             correct=correct,
         ).save()
 
+
         return JsonResponse({"success": True})
 
     return HttpResponse("Invalid request")
-
 
 def createCompSession(request):
     if request.method == "POST":
@@ -269,10 +233,8 @@ def createCompSession(request):
 
     return render(request, "core/create-comp.html")
 
-
 def enterComp(request):
     return render(request, "core/enter-comp.html")
-
 
 def competition(request, session_code):
     # try:
@@ -305,7 +267,6 @@ def competition(request, session_code):
 
     # except:
     #    return HttpResponse("<h1>Competition with this session code does not exist.</h1>")
-
 
 def verifyComp(request):
     session_code = request.GET.get("session_code").strip()
@@ -364,7 +325,6 @@ def verifyComp(request):
             }
         )
 
-
 def get_competition_details(request, scode):
     competition = Competition.objects.get(session_code=scode)
     email = request.GET.get("email")
@@ -373,7 +333,6 @@ def get_competition_details(request, scode):
         code = CompCodeStorage.objects.get(question=competition, user=user).code
     except:
         code = ""
-
     try:
         submission = CompSubmissions.objects.get(question=competition, user=user)
         if submission.barred:
@@ -390,7 +349,6 @@ def get_competition_details(request, scode):
             "code": code,
         }
     )
-
 
 @csrf_exempt
 def compSaveCode(request):
@@ -416,26 +374,6 @@ def compSaveCode(request):
 
 
 @csrf_exempt
-def compTestCode(request):
-    if request.method == "POST":
-        question = Competition.objects.get(
-            session_code=request.POST.get("session_code")
-        )
-        code = request.POST.get("code")
-
-        saveCompCode(question, request.session["email"], code)
-
-        output, time = execute_user_code(code)
-
-        if output.strip() == question.output:
-            return JsonResponse({"exec": True, "output": output, "time": time})
-
-        return JsonResponse({"exec": False, "output": output, "time": time})
-
-    return HttpResponse("Invalid request")
-
-
-@csrf_exempt
 def compSubmitCode(request):
     if request.method == "POST":
         question = Competition.objects.get(
@@ -446,11 +384,17 @@ def compSubmitCode(request):
         submit_time = datetime.now()
         user = Users.objects.get(email=email)
         barred = bool(request.POST.get("barred"))
+        incorrect = 0
+        prev_submissions = CompSubmissions.objects.all().filter(user=user, question=question)
+        for i in prev_submissions:
+            if not i.correct:
+                incorrect += 1
         if barred == True:
             try:
                 x = CompSubmissions.objects.get(question=question, user=user)
                 if x.barred == False:
                     x.barred = True
+                x.save()
             except:
                 CompSubmissions(
                     user=user,
@@ -475,6 +419,16 @@ def compSubmitCode(request):
                 memory=memory,
                 correct=correct,
             ).save()
+
+        if correct:
+            points = 100 - (incorrect * 10)
+            if points < 0:
+                points = 0
+            else:
+                points = points * question.points / 100
+            print(points)
+            user.competition_points = points
+            user.save()
 
         return JsonResponse({"success": True})
 
@@ -521,7 +475,7 @@ def getSubmissions(request, id):
                 "id": i.id,
                 "user": i.user.name,
                 "time": round(i.exec_time * 1000, 3),
-                "memory": i.memory,
+                "memory": round(i.memory, 3),
                 "correct": i.correct,
                 "submit_time": convert_datetime_format(i.submit_time),
             }
@@ -674,6 +628,7 @@ def getQuizDetails(request, quiz_id):
             "id": quiz.id,
             "title": quiz.title,
             "grade": quiz.grade,
+            "difficulty": quiz.difficulty,
             "start_time": quiz.start_time if quiz.single_submit == True else "",
             "end_time": quiz.end_time if quiz.single_submit == True else "",
             "section": quiz.section if quiz.single_submit == True else "",
@@ -772,12 +727,13 @@ def getQuizResponses(request, quiz_id):
                 score += 1
         json.append(
             {
-                "id": i.quiz.id,
+                "id": i.id,
+                "email":f"/{i.student.email}",
                 "name": i.student.name,
                 "class": i.student.grade_sec,
                 "score": f"{score}/{len(student_submissions)}",
                 "datetime": i.submit_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "email":i.student.email
+
             }
         )
 
@@ -797,17 +753,29 @@ def getQuizzesUsers(request):
                 "id": i.id,
                 "title": f"{i.id}. {i.title}",
                 "difficulty": i.difficulty,
-                "difficultyColor": f'text-{"green" if i.difficulty == "Easy" else "yellow" if i.difficulty == "Medium" else "red"}-500',
+                "difficultyColor": f'text-{"green" if i.difficulty == "E" else "yellow" if i.difficulty == "M" else "red"}-500',
             }
             try:
                 x = list(QuizSubmissions.objects.all().filter(student=user, quiz=i))
+                questions_and_options = get_quiz_questions_and_options(i.id)
+                no_of_questions = len(questions_and_options)
                 if len(x) > 0:
                     score = 0
                     data["status"] = "completed"
-                    for i in x:
-                        if i.correct:
-                            score += 1
-                    data["score"] = f"{score}/{len(x)}"
+                    if len(x) // no_of_questions > 1:
+                        total, score = 0, 0
+                        x.reverse()
+                        for i in x[:no_of_questions]:
+                            if i.correct:
+                                score += 1
+                            total += 1
+                        data["score"] = f"{score}/{total}"
+                    else:
+                        score = 0
+                        for i in x:
+                            if i.correct:
+                                score += 1
+                        data["score"] = f"{score}/{len(x)}"
             except:
                 data["status"] = "not-complete"
             json.append(data)
@@ -934,7 +902,7 @@ def getResults(request):
                         "score": f"{correct_count}/{total_count}"
                     }
             #print(result)
-        return JsonResponse({"multiple":True, "data":result}, safe=False)
+        return JsonResponse({"multiple":True, "data":result})
 
     return JsonResponse({"data": json, "score": f"{score}/{total}"})
 
@@ -1063,3 +1031,186 @@ def editQuiz(request):
         return JsonResponse({"message": "Quiz updated successfully"})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+def profileHomePage(request):
+    questions = Questions.objects.all()
+    email = request.GET.get("email")
+    user = Users.objects.get(email=email)
+    total, completed = 0, 0
+    questions_categorized = {"E":[0, 0], "M":[0, 0], "H": [0, 0]}
+    quizzes = Quiz.objects.all()
+    for i in questions:
+        x = Submissions.objects.filter(user=user, question=i)
+        if len(x) > 0:
+            completed += 1
+            questions_categorized[i.difficulty][0] += 1
+        total += 1
+        questions_categorized[i.difficulty][1] += 1
+    quiz_total, quiz_completed = 0, 0
+    quiz_categorized = {"E":[0, 0], "M":[0, 0], "H": [0, 0]}
+    for i in quizzes:
+        if (
+            i.single_submit != True
+            and i.grade == int("".join([x for x in user.grade_sec if x.isdigit()]))
+        ) or (i.single_submit == True and f"{i.grade}{i.section}" == user.grade_sec):
+            x = list(QuizSubmissions.objects.all().filter(student=user, quiz=i))
+            if len(x) > 0:
+                quiz_completed += 1
+                quiz_categorized[i.difficulty[0]][0] += 1
+            quiz_total += 1
+            quiz_categorized[i.difficulty[0]][1] += 1
+    return JsonResponse({"total":total, "completed":completed, "questions":questions_categorized, "quiz_total":quiz_total, "quiz_completed":quiz_completed, "quiz":quiz_categorized, "question_points":user.question_points, "competition_points":user.competition_points, "quiz_points":user.quiz_points})
+
+def getInfo(request):
+    email = request.GET.get("email")
+    user = Users.objects.get(email=email)
+    return JsonResponse({"data":{
+        "name":user.name,
+        "email":user.email,
+        "class":user.grade_sec,
+    }})
+
+@csrf_exempt
+def updateInfo(request):
+    email = request.POST.get("email")
+    name = request.POST.get("name")
+    grade_sec = request.POST.get("class")
+    password = request.POST.get("password")
+    repass = request.POST.get("repass")
+    if verify_post_request(int(request.POST.get("algorithm")), request.POST.get("encrypted")) == True:
+        if password == repass:
+            token = specialNameGenerator(128)
+            html_content = f"""
+            <strong>This email is for confirming your request to change your details. Please do not click on the link if you did not signup.</strong>
+            <br><br>
+            <a href="http://localhost:5173/profile/information/change?token={token}">Click here</a>
+            """
+
+            email_obj = EmailMessage("Confirmation", html_content, "jssvoting@gmail.com", [email])
+            email_obj.content_subtype = "html"
+            email_obj.send()
+
+            return JsonResponse({"message":"Email has been sent for confirmation.", "token":token})
+        else:
+            return JsonResponse({"message":"Invalid Request."})
+
+    return JsonResponse({"message":"Passwords do not match."})
+
+@csrf_exempt
+def updateInfoVerify(request):
+    email = request.POST.get("email")
+    name = request.POST.get("name")
+    grade_sec = request.POST.get("class")
+    password = request.POST.get("password")
+    repass = request.POST.get("repass")
+    user = Users.objects.get(email=email)
+    user.name = name
+    user.grade_sec = grade_sec
+    user.password = bcrypt_hash(password)
+    user.save()
+    return JsonResponse({"message":"success"})
+
+def getQuestionsAndCompetitions(request):
+    questions = Questions.objects.all()
+    competitions = Competition.objects.all()
+    q_json = []
+    c_json = []
+    time = datetime.now(pytz.utc) + timedelta(hours=4)
+    for q in questions:
+        q_json.append({"id":q.id, "title":q.title})
+    for c in competitions:
+        c_json.append({"id":c.session_code, "title":c.question[:20], "active":True if time < c.end and time > c.start else False})
+    return JsonResponse({"questions":q_json, "competitions":c_json})
+
+def getQuestionsAndCompetitionsDetails(request):
+    session_code = request.GET.get("session_code")
+    q_id = request.GET.get("id")
+
+    if q_id:
+        question = Questions.objects.get(id=q_id)
+        submissions = Submissions.objects.all().filter(question=question)
+        json = []
+        for i in submissions:
+            json.append({"id":i.id, "user":i.user.name, "email":i.user.email, "class":i.user.grade_sec, "submit_time":i.submit_time.strftime("%Y-%m-%d %H:%M:%S")})
+        return JsonResponse({"question":question.question, "inputs":question.inputs, "outputs":question.outputs, "difficulty":question.difficulty, "points":question.points, "results":json})
+
+    competition = Competition.objects.get(session_code=session_code)
+    submissions = CompSubmissions.objects.all().filter(question=competition)
+    json = []
+    for i in submissions:
+        json.append({"id":i.id, "user":i.user.name, "class":i.user.grade_sec, "submit_time":i.submit_time.strftime("%Y-%m-%d %H:%M:%S")})
+    return JsonResponse({"question":competition.question, "inputs":competition.inputs, "outputs":competition.outputs, "points":competition.points, "start":competition.start, "end":competition.end, "results":json, "quiz_code":session_code})
+
+def getQuestionsAndCompetitionsSubmissions(request):
+    session_code = request.GET.get("session_code")
+    q_id = request.GET.get("q_id")
+    student = Users.objects.get(email=request.GET.get("email"))
+
+    if q_id:
+        question = Questions.objects.get(id=q_id)
+        submissions = Submissions.objects.all().filter(question=question, user=student)
+        json = []
+        for i in submissions:
+            json.append({"id":i.id, "submit_time":i.submit_time.strftime("%Y-%m-%d %H:%M:%S"), "correct":i.correct, "exec_time":round(i.exec_time, 3), "memory":round(i.memory, 3), "code":i.code})
+    else:
+        competition = Competition.objects.get(session_code=session_code)
+        submissions = CompSubmissions.objects.get(competition=competition, student=student)
+        json = []
+    return JsonResponse({"results":json})
+
+@csrf_exempt
+def updateQuestionsAndCompetitions(request):
+    if request.method == "POST":
+        question = request.POST.get("question")
+        inputs = request.POST.get("inputs")
+        outputs = request.POST.get("outputs")
+        difficulty = request.POST.get("difficulty")
+        points = request.POST.get("points")
+        q_id = request.POST.get("id")
+        type = request.POST.get("type")
+        if type == "q":
+            question_obj = Questions.objects.get(id=q_id)
+            question_obj.question = question
+            question_obj.inputs = inputs
+            question_obj.outputs = outputs
+            question_obj.difficulty = difficulty
+            question_obj.points = points
+            question_obj.save()
+        else:
+            competition = Competition.objects.get(session_code=q_id)
+            competition.question = question
+            competition.inputs = inputs
+            competition.outputs = outputs
+            competition.points = points
+            competition.start = request.POST.get("start")
+            competition.end = request.POST.get("end")
+            competition.save()
+        return JsonResponse({"message":"success"})
+
+@csrf_exempt
+def deleteQuestionAndCompetition(request):
+    id = request.POST.get("id")
+    type = request.POST.get("type")
+    if type == "q":
+        Questions.objects.get(id=id).delete()
+    else:
+        Competition.objects.get(session_code=id).delete()
+    return JsonResponse({"message":"success"})
+
+@csrf_exempt
+def deleteQuestionAndCompetitionSubmissions(request):
+    id = request.POST.get("id")
+    type = request.POST.get("type")
+    if type == "q":
+        Submissions.objects.all().filter(question=Questions.objects.get(id=id)).delete()
+    else:
+        CompSubmissions.objects.all().filter(question=Competition.objects.get(session_code=id)).delete()
+    return JsonResponse({"message":"success"})
+
+@csrf_exempt
+def addUpdates(request):
+    title = request.POST.get("title")
+    description = request.POST.get("description")
+    time = datetime.now()
+    Updates(title=title, description=description, date=time).save()
+    return JsonResponse({"message":"success"})

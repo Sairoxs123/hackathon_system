@@ -8,6 +8,9 @@ class Users(models.Model):
     email = models.EmailField("Email", max_length=50, primary_key=True)
     password = models.CharField("Password", max_length=100)
     grade_sec = models.CharField("Class", max_length=5)
+    question_points = models.IntegerField("Question Points", default=0)
+    competition_points = models.IntegerField("Competition Points", default=0)
+    quiz_points = models.IntegerField("Quiz Points", default=0)
 
     def __str__(self):
         return self.email
@@ -19,6 +22,7 @@ class Questions(models.Model):
     inputs = models.CharField("Inputs", max_length=1024, blank=True)
     outputs = models.CharField("Outputs", max_length=1024, null=False)
     difficulty = models.CharField("Difficulty", max_length=1, null=False)
+    points = models.IntegerField("Points", default=0)
 
     def __str__(self):
         return str(self.id)
@@ -52,6 +56,7 @@ class Competition(models.Model):
     outputs = models.CharField("Outputs", max_length=1024, null=False)
     start = models.DateTimeField("Start Time")
     end = models.DateTimeField("End Time")
+    points = models.IntegerField("Points", default=0)
 
     def __str__(self):
         return self.session_code
@@ -86,8 +91,9 @@ class Quiz(models.Model):
     start_time = models.DateTimeField("Start Time", null=True, blank=True)
     end_time = models.DateTimeField("End Time", null=True, blank=True)
     grade = models.IntegerField("Grade")
-    section = models.CharField("Section", max_length=1)
+    section = models.CharField("Section", max_length=1, null=True, blank=True)
     difficulty = models.CharField("Difficulty", max_length=10, default="Easy")
+    points = models.IntegerField("Points", default=0)
 
     def __str__(self):
         return self.title
@@ -119,3 +125,12 @@ class QuizSubmissions(models.Model):
     correct = models.BooleanField("Correct", default=False)
     selected_option = models.ForeignKey(Option, on_delete=models.CASCADE, null=True, blank=True)
     submit_time = models.DateTimeField("Submit Time")
+
+class Updates(models.Model):
+    id = models.IntegerField(primary_key=True, blank=False, unique=True)
+    title = models.CharField("Title", max_length=100, null=False)
+    description = models.CharField("Description", max_length=1024, null=False)
+    date = models.DateField("Date")
+
+    def __str__(self):
+        return self.title
