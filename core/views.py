@@ -108,7 +108,7 @@ def get_questions(request):
                 "difficulty": i.difficulty,
                 "completed": True if len(x) > 0 else False,
                 "in_progress": attempt if len(x) == 0 else False,
-                "difficultyColor": f'text-{"green" if i.difficulty == "E" else "yellow" if i.difficulty == "M" else "red"}-500',
+                "difficultyColor": f'text-{"green" if i.difficulty == "E" else "yellow" if i.difficulty == "M" else "red"}-400',
             }
         )
     return JsonResponse({"questions": json})
@@ -197,7 +197,7 @@ def submitCode(request):
             else:
                 points = points * question.points / 100
             print(points)
-            user.question_points = points
+            user.question_points += points
             user.save()
 
         Submissions(
@@ -389,6 +389,7 @@ def compSubmitCode(request):
         for i in prev_submissions:
             if not i.correct:
                 incorrect += 1
+        correct = False
         if barred == True:
             try:
                 x = CompSubmissions.objects.get(question=question, user=user)
@@ -427,7 +428,7 @@ def compSubmitCode(request):
             else:
                 points = points * question.points / 100
             print(points)
-            user.competition_points = points
+            user.competition_points += points
             user.save()
 
         return JsonResponse({"success": True})
@@ -478,6 +479,7 @@ def getSubmissions(request, id):
                 "memory": round(i.memory, 3),
                 "correct": i.correct,
                 "submit_time": convert_datetime_format(i.submit_time),
+                "code": i.code,
             }
         )
     return JsonResponse({"submissions": submissions})
@@ -668,46 +670,16 @@ def deleteQuiz(request):
 @csrf_exempt
 def deleteSumissions(request):
     quiz_id = request.POST.get("quiz_id")
-    QuizSubmissions.objects.all().filter(quiz=Quiz.objects.get(id=quiz_id)).delete()
+    submissions = QuizSubmissions.objects.all().filter(quiz=Quiz.objects.get(id=quiz_id))
+    students = []
+    for i in submissions:
+        if i.student not in students:
+            student_submissions = QuizSubmissions.objects.all().filter(student=i.student, quiz=Quiz.objects.get(id=quiz_id))
+            i.student.quiz_points -= len(student_submissions.filter(correct=True))
+            i.student.save()
+            student_submissions.delete()
+            students.append(i.student)
     return JsonResponse({"message": "Submissions deleted successfully"})
-
-#def mergeSort(L):
-    if len(L) <= 1:
-        return L
-
-    mid = len(L) // 2
-
-    left = L[:mid]
-    right = L[mid:]
-
-    sortedleft = mergeSort(left)
-    sortedright = mergeSort(right)
-
-    return merge(sortedleft, sortedright)
-#def merge(left, right):
-
-    result = []
-
-    i = j = 0
-
-    while i < len(left) and j < len(right):
-        if int(left[i].score.split("/")[0]) < int(right[j].score.split("/")[0]):
-            result.append(left[i])
-            i += 1
-
-        elif int(left[i].score.split("/")[0]) == int(right[j].score.split("/")[0]):
-            result.extend([left[i], right[j]])
-            i += 1
-            j += 1
-
-        else:
-            result.append(right[j])
-            j += 1
-
-    result.extend(left[i:])
-    result.extend(right[j:])
-
-    return result
 
 def getQuizResponses(request, quiz_id):
     all_submissions = list(QuizSubmissions.objects.all().filter(quiz=Quiz.objects.get(id=quiz_id)).order_by("-submit_time"))
@@ -753,7 +725,7 @@ def getQuizzesUsers(request):
                 "id": i.id,
                 "title": f"{i.id}. {i.title}",
                 "difficulty": i.difficulty,
-                "difficultyColor": f'text-{"green" if i.difficulty == "E" else "yellow" if i.difficulty == "M" else "red"}-500',
+                "difficultyColor": f'text-{"green" if i.difficulty == "E" else "yellow" if i.difficulty == "M" else "red"}-400',
             }
             try:
                 x = list(QuizSubmissions.objects.all().filter(student=user, quiz=i))
@@ -812,7 +784,8 @@ def submitQuiz(request):
                             submit_time=time,
                             selected_option=i
                         ).save()
-
+        user.quiz_points += score
+        user.save()
         return JsonResponse({"score":score})
 
 def getResults(request):
@@ -1059,7 +1032,37 @@ def profileHomePage(request):
                 quiz_categorized[i.difficulty[0]][0] += 1
             quiz_total += 1
             quiz_categorized[i.difficulty[0]][1] += 1
-    return JsonResponse({"total":total, "completed":completed, "questions":questions_categorized, "quiz_total":quiz_total, "quiz_completed":quiz_completed, "quiz":quiz_categorized, "question_points":user.question_points, "competition_points":user.competition_points, "quiz_points":user.quiz_points})
+    user_quizzes = QuizSubmissions.objects.all().filter(student=user, quiz=i)
+    user_questions = Submissions.objects.all().filter(user=user)
+    user_competitions = CompSubmissions.objects.all().filter(user=user)
+    quiz_correct, quiz_total_options = 0, 0
+    for i in user_quizzes:
+        if i.correct:
+            quiz_correct += 1
+        quiz_total_options += 1
+    try:
+        quiz_accuracy = round((quiz_correct / quiz_total_options) * 100, 2)
+    except:
+        quiz_accuracy = "-"
+    question_correct, question_total_options = 0, 0
+    for i in user_questions:
+        if i.correct:
+            question_correct += 1
+        question_total_options += 1
+    try:
+        question_accuracy = round((question_correct / question_total_options) * 100, 2)
+    except:
+        question_accuracy = "-"
+    competition_correct, competition_total_options = 0, 0
+    for i in user_competitions:
+        if i.correct:
+            competition_correct += 1
+        competition_total_options += 1
+    try:
+        competition_accuracy = round((competition_correct / competition_total_options) * 100, 2)
+    except:
+        competition_accuracy = "-"
+    return JsonResponse({"total":total, "completed":completed, "questions":questions_categorized, "quiz_total":quiz_total, "quiz_completed":quiz_completed, "quiz":quiz_categorized, "points":[user.question_points, user.quiz_points, user.competition_points], "accuracy":[question_accuracy, quiz_accuracy, competition_accuracy]})
 
 def getInfo(request):
     email = request.GET.get("email")
@@ -1151,7 +1154,7 @@ def getQuestionsAndCompetitionsSubmissions(request):
         submissions = Submissions.objects.all().filter(question=question, user=student)
         json = []
         for i in submissions:
-            json.append({"id":i.id, "submit_time":i.submit_time.strftime("%Y-%m-%d %H:%M:%S"), "correct":i.correct, "exec_time":round(i.exec_time, 3), "memory":round(i.memory, 3), "code":i.code})
+            json.append({"id":i.id, "submit_time":convert_datetime_format(i.submit_time), "correct":i.correct, "exec_time":round(i.exec_time, 3), "memory":round(i.memory, 3), "code":i.code})
     else:
         competition = Competition.objects.get(session_code=session_code)
         submissions = CompSubmissions.objects.get(competition=competition, student=student)
@@ -1202,9 +1205,25 @@ def deleteQuestionAndCompetitionSubmissions(request):
     id = request.POST.get("id")
     type = request.POST.get("type")
     if type == "q":
-        Submissions.objects.all().filter(question=Questions.objects.get(id=id)).delete()
+        submissions = Submissions.objects.all().filter(question=Questions.objects.get(id=id))
+        students = []
+        for i in submissions:
+            if i.user not in students:
+                student_submissions = Submissions.objects.all().filter(user=i.user, question=Questions.objects.get(id=id))
+                i.user.question_points -= len(student_submissions.filter(correct=True))
+                i.user.save()
+                student_submissions.delete()
+                students.append(i.user)
     else:
-        CompSubmissions.objects.all().filter(question=Competition.objects.get(session_code=id)).delete()
+        submissions = CompSubmissions.objects.all().filter(question=Competition.objects.get(session_code=id))
+        students = []
+        for i in submissions:
+            if i.user not in students:
+                student_submissions = CompSubmissions.objects.all().filter(user=i.user, question=Competition.objects.get(session_code=id))
+                i.user.competition_points -= len(student_submissions.filter(correct=True))
+                i.user.save()
+                student_submissions.delete()
+                students.append(i.user)
     return JsonResponse({"message":"success"})
 
 @csrf_exempt

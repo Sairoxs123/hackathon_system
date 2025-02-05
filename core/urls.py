@@ -5,7 +5,6 @@ urlpatterns = [
     path("", index, name="home"),
     path("questions/get/", get_questions, name="get-questions"),
     path("question/details/<int:id>/", get_question_details, name="question-details"),
-    #path("question/<int:id>/", getQuestion, name="question"),
     path("code/save/", saveCode, name="test-code"),
     path("code/submit/", submitCode, name="submit-code"),
     path("competition/", enterComp, name="enter-comp"),
